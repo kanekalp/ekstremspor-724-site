@@ -33,6 +33,8 @@ const VEHICLE_LABEL: Record<string, string> = {
   running: "Koşu",
 };
 
+const INITIAL_SHOW = 4;
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
@@ -72,6 +74,10 @@ export function PendingActivities() {
 
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
   const [assigning, setAssigning] = useState(false);
+
+  const [showAllWaiting, setShowAllWaiting] = useState(false);
+  const [showAllRemote, setShowAllRemote] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   function availableEquipmentFor(type: EquipmentVehicleType): EquipRow | null {
     return (
@@ -166,7 +172,11 @@ export function PendingActivities() {
     if (equip) {
       await supabase
         .from("equipments")
-        .update({ status: "available", returned_at: new Date().toISOString() })
+        .update({
+          status: "available",
+          assigned_to: null,
+          returned_at: new Date().toISOString(),
+        })
         .eq("id", equip.id);
     }
 
@@ -214,6 +224,13 @@ export function PendingActivities() {
       ),
   );
 
+  const visibleWaiting = showAllWaiting
+    ? waitingRows
+    : waitingRows.slice(0, INITIAL_SHOW);
+  const visibleRemote = showAllRemote
+    ? remoteRows
+    : remoteRows.slice(0, INITIAL_SHOW);
+
   const availableForAssign = assignTarget
     ? equipments.filter(
         (e) => e.type === assignTarget.vehicleType && e.status === "available",
@@ -227,6 +244,7 @@ export function PendingActivities() {
           {error}
         </div>
       )}
+
       <div className="space-y-3">
         <div>
           <h3 className="font-heading text-base font-semibold tracking-tight text-ink">
@@ -262,14 +280,18 @@ export function PendingActivities() {
                   <div className="truncate text-sm font-semibold text-ink">
                     {r.profiles?.full_name ?? "—"}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-ink/50">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sun/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ink/50">
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sun/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 whitespace-nowrap">
                       <span className="h-1.5 w-1.5 rounded-full bg-sun" />
                       Sürüyor
                     </span>
-                    <span>{VEHICLE_LABEL[r.vehicle_type]}</span>
+                    <span className="whitespace-nowrap">
+                      {VEHICLE_LABEL[r.vehicle_type]}
+                    </span>
                     <span>·</span>
-                    <span>{timeAgo(r.created_at)}</span>
+                    <span className="whitespace-nowrap">
+                      {timeAgo(r.created_at)}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -288,7 +310,8 @@ export function PendingActivities() {
                 </button>
               </div>
             ))}
-            {waitingRows.map((r) => (
+
+            {visibleWaiting.map((r) => (
               <div
                 key={r.id}
                 className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3.5 shadow-sm sm:px-5"
@@ -306,34 +329,59 @@ export function PendingActivities() {
                   <div className="truncate text-sm font-semibold text-ink">
                     {r.profiles?.full_name ?? "—"}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-ink/50">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-ink/8 px-1.5 py-0.5 text-[10px] font-medium text-ink/60">
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ink/50">
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/8 px-1.5 py-0.5 text-[10px] font-medium text-ink/60 whitespace-nowrap">
                       <span className="h-1.5 w-1.5 rounded-full bg-ink/40" />
                       Ekipman bekliyor
                     </span>
-                    <span>{VEHICLE_LABEL[r.vehicle_type]}</span>
+                    <span className="whitespace-nowrap">
+                      {VEHICLE_LABEL[r.vehicle_type]}
+                    </span>
                     <span>·</span>
-                    <span>{timeAgo(r.created_at)}</span>
+                    <span className="whitespace-nowrap">
+                      {timeAgo(r.created_at)}
+                    </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAssignTarget({
-                      userId: r.user_id,
-                      vehicleType: r.vehicle_type,
-                      userName: r.profiles?.full_name ?? "—",
-                    })
-                  }
-                  className="shrink-0 rounded-full border border-sky/50 px-3 py-1.5 text-xs font-semibold text-sky-deep transition hover:bg-sky/10"
-                >
-                  Ekipman Ata
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssignTarget({
+                        userId: r.user_id,
+                        vehicleType: r.vehicle_type,
+                        userName: r.profiles?.full_name ?? "—",
+                      })
+                    }
+                    className="rounded-full border border-sky/50 px-3 py-1.5 text-xs font-semibold text-sky-deep transition hover:bg-sky/10"
+                  >
+                    Ekipman Ata
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === r.id}
+                    onClick={() => updateStatus(r.id, "rejected")}
+                    className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink/60 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {busyId === r.id ? "…" : "Reddet"}
+                  </button>
+                </div>
               </div>
             ))}
+
+            {!showAllWaiting && waitingRows.length > INITIAL_SHOW && (
+              <button
+                type="button"
+                onClick={() => setShowAllWaiting(true)}
+                className="w-full rounded-2xl border border-ink/10 bg-white py-3 text-sm font-medium text-ink/50 transition hover:bg-ink/3 hover:text-ink"
+              >
+                {waitingRows.length - INITIAL_SHOW} bekleyen daha →
+              </button>
+            )}
           </div>
         )}
       </div>
+
       <div className="space-y-3">
         <div>
           <h3 className="font-heading text-base font-semibold tracking-tight text-ink">
@@ -350,97 +398,133 @@ export function PendingActivities() {
         ) : remoteRows.length === 0 ? (
           <Placeholder text="Bekleyen uzaktan başvuru yok." />
         ) : (
-          <div className="space-y-3">
-            {remoteRows.map((r) => {
+          <div className="space-y-2">
+            {visibleRemote.map((r) => {
               const thumb = thumbs[r.id];
+              const isExpanded = expandedId === r.id;
               return (
                 <div
                   key={r.id}
-                  className="grid grid-cols-1 gap-4 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:grid-cols-[170px_1fr_auto] sm:gap-5 sm:p-5"
+                  className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm"
                 >
                   <button
                     type="button"
-                    onClick={() => thumb && setEvidenceUrl(thumb)}
-                    disabled={!thumb}
-                    className="group relative aspect-4/3 overflow-hidden rounded-xl border border-ink/10 bg-ink/3 disabled:cursor-default"
+                    onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left sm:px-5"
                   >
-                    {thumb ? (
-                      <>
-                        <img
-                          src={thumb}
-                          alt="Aktivite kanıtı"
-                          className="h-full w-full object-cover"
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky/10">
+                      <div className="h-5 w-7 text-sky-deep">
+                        <VehicleGlyph
+                          type={r.vehicle_type}
+                          color="currentColor"
+                          accent="#f59e0b"
                         />
-                        <div className="absolute inset-0 grid place-items-center bg-black/0 transition group-hover:bg-black/35">
-                          <span className="rounded-full bg-white/0 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition group-hover:bg-white/15 group-hover:opacity-100">
-                            Büyüt
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="grid h-full place-items-center text-xs text-ink/40">
-                        {r.evidence_url ? "Görsel yükleniyor..." : "Kanıt yok"}
                       </div>
-                    )}
-                    <span className="absolute left-2 top-2 rounded-md bg-sky-deep/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                      Uzaktan
-                    </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-ink">
+                          {r.profiles?.full_name ?? "—"}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-sky-deep/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-deep">
+                          Uzaktan
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0 text-xs text-ink/50">
+                        <span className="font-heading font-semibold tabular-nums text-ink/70">
+                          {r.distance.toFixed(1)} km
+                        </span>
+                        <span>·</span>
+                        <span className="whitespace-nowrap">
+                          {VEHICLE_LABEL[r.vehicle_type]}
+                        </span>
+                        <span>·</span>
+                        <span className="whitespace-nowrap">
+                          {timeAgo(r.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`h-4 w-4 shrink-0 text-ink/35 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
                   </button>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="truncate text-base font-semibold text-ink">
-                      {r.profiles?.full_name ?? "—"}
-                    </div>
-                    <div className="truncate text-xs text-ink/50">
-                      {r.profiles?.email} · {timeAgo(r.created_at)}
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="font-heading text-xl font-semibold tabular-nums text-ink">
-                        {r.distance.toFixed(1)}{" "}
-                        <span className="text-sm font-medium text-ink/40">
-                          km
-                        </span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/8 px-2 py-0.5 text-xs text-ink/60">
-                        <span className="h-3.5 w-5 text-ink/70">
-                          <VehicleGlyph
-                            type={r.vehicle_type}
-                            color="currentColor"
-                            accent="#f59e0b"
+
+                  {isExpanded && (
+                    <div className="border-t border-ink/8 px-4 pb-4 pt-3 sm:px-5">
+                      {thumb ? (
+                        <button
+                          type="button"
+                          onClick={() => setEvidenceUrl(thumb)}
+                          className="group relative mb-3 block w-full overflow-hidden rounded-xl border border-ink/10"
+                        >
+                          <img
+                            src={thumb}
+                            alt="Aktivite kanıtı"
+                            className="max-h-52 w-full object-cover"
                           />
-                        </span>
-                        {VEHICLE_LABEL[r.vehicle_type] ?? r.vehicle_type}
-                      </span>
-                      {r.date_range && (
-                        <span className="text-xs text-ink/50">
-                          {r.date_range}
-                        </span>
+                          <div className="absolute inset-0 grid place-items-center bg-black/0 transition group-hover:bg-black/30">
+                            <span className="rounded-full bg-white/0 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition group-hover:bg-white/15 group-hover:opacity-100">
+                              Büyüt
+                            </span>
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="mb-3 rounded-xl bg-ink/5 px-4 py-4 text-center text-xs text-ink/50">
+                          {r.evidence_url
+                            ? "Görsel yükleniyor..."
+                            : "Kanıt yok"}
+                        </div>
                       )}
+                      {r.date_range && (
+                        <p className="mb-3 text-xs text-ink/50">
+                          {r.date_range}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(r.id, "approved")}
+                          disabled={busyId === r.id}
+                          className="flex-1 rounded-lg bg-grass-deep px-4 py-2 text-sm font-semibold text-paper transition hover:bg-grass-deep/85 disabled:bg-ink/20"
+                        >
+                          {busyId === r.id ? "…" : "✓ Onayla"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(r.id, "rejected")}
+                          disabled={busyId === r.id}
+                          className="flex-1 rounded-lg border border-ink/20 px-4 py-2 text-sm font-medium text-ink/60 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                        >
+                          Reddet
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2 sm:flex-col sm:justify-center">
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(r.id, "approved")}
-                      disabled={busyId === r.id}
-                      className="flex-1 rounded-lg bg-grass-deep px-4 py-2 text-sm font-semibold text-paper transition hover:bg-grass-deep/85 disabled:bg-ink/20 sm:flex-none"
-                    >
-                      ✓ Onayla
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(r.id, "rejected")}
-                      disabled={busyId === r.id}
-                      className="flex-1 rounded-lg border border-ink/20 px-4 py-2 text-sm font-medium text-ink/60 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50 sm:flex-none"
-                    >
-                      Reddet
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })}
+
+            {!showAllRemote && remoteRows.length > INITIAL_SHOW && (
+              <button
+                type="button"
+                onClick={() => setShowAllRemote(true)}
+                className="w-full rounded-2xl border border-ink/10 bg-white py-3 text-sm font-medium text-ink/50 transition hover:bg-ink/3 hover:text-ink"
+              >
+                {remoteRows.length - INITIAL_SHOW} başvuru daha →
+              </button>
+            )}
           </div>
         )}
       </div>
+
       {returnTarget && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -504,67 +588,74 @@ export function PendingActivities() {
           </div>
         </div>
       )}
+
       {assignTarget && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={() => !assigning && setAssignTarget(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            className="flex max-h-[90dvh] w-full max-w-sm flex-col rounded-2xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="mb-1 font-heading text-xl font-semibold">
-              Ekipman Ata
-            </h2>
-            <p className="mb-4 text-sm text-ink/50">
-              <span className="font-medium text-ink">
-                {assignTarget.userName}
-              </span>{" "}
-              için{" "}
-              <span className="font-medium text-ink">
-                {VEHICLE_LABEL[assignTarget.vehicleType]}
-              </span>{" "}
-              seç
-            </p>
-            {availableForAssign.length === 0 ? (
-              <div className="rounded-xl border border-ink/10 bg-ink/3 px-4 py-6 text-center text-sm text-ink/50">
-                Boşta {VEHICLE_LABEL[assignTarget.vehicleType]} yok.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {availableForAssign.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    disabled={assigning}
-                    onClick={() => handleAssignEquipment(e.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-ink/10 bg-white px-4 py-3 text-left transition hover:border-sky/40 hover:bg-sky/5 disabled:opacity-50"
-                  >
-                    <div className="h-5 w-7 shrink-0 text-ink/70">
-                      <VehicleGlyph
-                        type={e.type}
-                        color="currentColor"
-                        accent="#f59e0b"
-                      />
-                    </div>
-                    <span className="font-mono text-sm text-ink/50">
-                      {e.code ?? e.id.slice(0, 8)}
-                    </span>
-                    <span className="ml-auto rounded-full bg-grass/30 px-2 py-0.5 text-xs font-medium text-grass-deep">
-                      Boşta
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setAssignTarget(null)}
-              disabled={assigning}
-              className="mt-4 w-full rounded-full border border-ink/20 py-2 text-sm font-medium text-ink/60 transition hover:bg-ink/3 disabled:opacity-50"
-            >
-              İptal
-            </button>
+            <div className="shrink-0 px-6 pb-3 pt-6">
+              <h2 className="font-heading text-xl font-semibold">
+                Ekipman Ata
+              </h2>
+              <p className="mt-1 text-sm text-ink/50">
+                <span className="font-medium text-ink">
+                  {assignTarget.userName}
+                </span>{" "}
+                için{" "}
+                <span className="font-medium text-ink">
+                  {VEHICLE_LABEL[assignTarget.vehicleType]}
+                </span>{" "}
+                seç
+              </p>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2">
+              {availableForAssign.length === 0 ? (
+                <div className="rounded-xl border border-ink/10 bg-ink/3 px-4 py-6 text-center text-sm text-ink/50">
+                  Boşta {VEHICLE_LABEL[assignTarget.vehicleType]} yok.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availableForAssign.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      disabled={assigning}
+                      onClick={() => handleAssignEquipment(e.id)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-ink/10 bg-white px-4 py-3 text-left transition hover:border-sky/40 hover:bg-sky/5 disabled:opacity-50"
+                    >
+                      <div className="h-5 w-7 shrink-0 text-ink/70">
+                        <VehicleGlyph
+                          type={e.type}
+                          color="currentColor"
+                          accent="#f59e0b"
+                        />
+                      </div>
+                      <span className="font-mono text-sm text-ink/50">
+                        {e.code ?? e.id.slice(0, 8)}
+                      </span>
+                      <span className="ml-auto rounded-full bg-grass/30 px-2 py-0.5 text-xs font-medium text-grass-deep">
+                        Boşta
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 px-6 pb-6 pt-3">
+              <button
+                type="button"
+                onClick={() => setAssignTarget(null)}
+                disabled={assigning}
+                className="w-full rounded-full border border-ink/20 py-2 text-sm font-medium text-ink/60 transition hover:bg-ink/3 disabled:opacity-50"
+              >
+                İptal
+              </button>
+            </div>
           </div>
         </div>
       )}

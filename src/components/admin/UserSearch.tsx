@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export type SearchedUser = {
@@ -20,6 +20,17 @@ export function UserSearch({ onSelect, selected, placeholder }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchedUser[]>([]);
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (selected || query.trim().length < 2) {
@@ -40,7 +51,7 @@ export function UserSearch({ onSelect, selected, placeholder }: Props) {
   }, [query, selected, supabase]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {selected ? (
         <div className="flex items-center justify-between rounded-lg border border-ink/15 bg-ink/3 px-3 py-2">
           <div>

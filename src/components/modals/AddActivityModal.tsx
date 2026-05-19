@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ModalScene, VehicleGlyph } from "@/components/illustrations";
 import { KvkkModal } from "@/components/modals/KvkkModal";
 import { requestOnSiteEquipment } from "@/lib/actions/activities";
+import { compressImage } from "@/lib/utils/compressImage";
 import type { EquipmentVehicleType, VehicleType } from "@/lib/types";
 
 type Props = {
@@ -50,6 +51,7 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
   const [evidence, setEvidence] = useState<File | null>(null);
   const [kvkk, setKvkk] = useState(false);
   const [kvkkOpen, setKvkkOpen] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -85,6 +87,7 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
     setBanned(false);
     setActiveVehicle(null);
     setExistingVehicle(null);
+    setCompressing(false);
   }
 
   function handleClose() {
@@ -100,8 +103,7 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
     if (mode === "remote") {
       if (!evidence || !kvkk) return;
 
-      const ext = evidence.name.split(".").pop() ?? "jpg";
-      const path = `${userId}/${Date.now()}.${ext}`;
+      const path = `${userId}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("evidence")
@@ -526,9 +528,13 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) =>
-                          setEvidence(e.target.files?.[0] ?? null)
-                        }
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setCompressing(true);
+                          setEvidence(await compressImage(file));
+                          setCompressing(false);
+                        }}
                       />
                       <svg
                         width="32"
@@ -562,7 +568,13 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
                           className="text-ink/30"
                         />
                       </svg>
-                      {evidence ? (
+                      {compressing ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[13px] font-semibold text-ink/60">
+                            Sıkıştırılıyor…
+                          </span>
+                        </div>
+                      ) : evidence ? (
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[13px] font-semibold text-ink">
                             {evidence.name}
@@ -647,7 +659,7 @@ export function AddActivityModal({ open, onClose, userId }: Props) {
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={!evidence || !kvkk || submitting}
+                        disabled={!evidence || !kvkk || submitting || compressing}
                         className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ink py-2.5 text-sm font-semibold text-paper transition hover:bg-ink/85 disabled:bg-ink/30"
                       >
                         {submitting ? "Gönderiliyor…" : "Onaya Gönder"}

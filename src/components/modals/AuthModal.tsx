@@ -16,11 +16,11 @@ type Step = "email" | "password";
 export function AuthModal({ open, onClose }: Props) {
   const supabase = createClient();
   const router = useRouter();
-  const [step, setStep]         = useState<Step>("email");
-  const [email, setEmail]       = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -38,9 +38,6 @@ export function AuthModal({ open, onClose }: Props) {
       type: "email",
     });
     if (verifyError || !data.session) {
-      // Surface the actual gotrue error so root cause is visible in
-      // the UI and the console — generic "tekrar deneyin" hides the
-      // underlying problem and makes debugging much harder.
       if (verifyError) console.error("verifyOtp failed:", verifyError);
       setError(
         verifyError?.message
@@ -70,13 +67,11 @@ export function AuthModal({ open, onClose }: Props) {
     }
 
     if (check.mode === "admin") {
-      // Admin needs a password — show password field
       setStep("password");
       setLoading(false);
       return;
     }
 
-    // Student path — passwordless, generate token and verify
     const result = await signInStudent(trimmed);
     if (result.error || !result.tokenHash) {
       setError(result.error ?? "Oturum açılamadı.");
@@ -107,13 +102,22 @@ export function AuthModal({ open, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-title"
-      onClick={() => { reset(); onClose(); }}
+      onClick={() => {
+        reset();
+        onClose();
+      }}
     >
       <div
         className="modal-pop w-full max-w-md overflow-hidden rounded-[22px] bg-paper shadow-[0_28px_72px_-16px_rgba(26,26,26,0.32)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <ModalScene title="Katıl" onClose={() => { reset(); onClose(); }} />
+        <ModalScene
+          title="Katıl"
+          onClose={() => {
+            reset();
+            onClose();
+          }}
+        />
 
         <div className="px-6 pb-7 pt-5">
           {step === "email" ? (
@@ -126,7 +130,8 @@ export function AuthModal({ open, onClose }: Props) {
                   E-postayla giriş yap
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-ink/60">
-                  YTÜ öğrenci e-postanı (<strong>@std.yildiz.edu.tr</strong>) gir.
+                  YTÜ öğrenci e-postanı (<strong>@std.yildiz.edu.tr</strong>)
+                  gir.
                 </p>
               </div>
 
@@ -155,11 +160,20 @@ export function AuthModal({ open, onClose }: Props) {
                 disabled={loading || !email.trim()}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-sm font-semibold text-paper transition hover:bg-ink/85 active:scale-[0.97] active:transition-none disabled:bg-ink/30"
               >
-                {loading ? <><Spinner /> Kontrol ediliyor…</> : "Devam Et"}
+                {loading ? (
+                  <>
+                    <Spinner /> Kontrol ediliyor…
+                  </>
+                ) : (
+                  "Devam Et"
+                )}
               </button>
             </form>
           ) : (
-            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="flex flex-col gap-4"
+            >
               <div>
                 <h2
                   id="auth-title"
@@ -168,7 +182,9 @@ export function AuthModal({ open, onClose }: Props) {
                   Admin şifresi
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-ink/60">
-                  <strong className="font-medium text-ink">{email.trim()}</strong>{" "}
+                  <strong className="font-medium text-ink">
+                    {email.trim()}
+                  </strong>{" "}
                   admin hesabı olarak tanındı. Şifreni gir.
                 </p>
               </div>
@@ -198,12 +214,22 @@ export function AuthModal({ open, onClose }: Props) {
                 disabled={loading || !password.trim()}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-sm font-semibold text-paper transition hover:bg-ink/85 active:scale-[0.97] active:transition-none disabled:bg-ink/30"
               >
-                {loading ? <><Spinner /> Doğrulanıyor…</> : "Giriş Yap"}
+                {loading ? (
+                  <>
+                    <Spinner /> Doğrulanıyor…
+                  </>
+                ) : (
+                  "Giriş Yap"
+                )}
               </button>
 
               <button
                 type="button"
-                onClick={() => { setStep("email"); setPassword(""); setError(null); }}
+                onClick={() => {
+                  setStep("email");
+                  setPassword("");
+                  setError(null);
+                }}
                 className="text-sm text-ink/45 transition hover:text-ink/70"
               >
                 ← Farklı e-posta kullan
@@ -218,9 +244,25 @@ export function AuthModal({ open, onClose }: Props) {
 
 function Spinner() {
   return (
-    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    <svg
+      className="h-4 w-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
   );
 }

@@ -6,18 +6,21 @@ import { createClient } from "@/lib/supabase/client";
 import { PendingActivities } from "@/components/admin/PendingActivities";
 import { EquipmentTable } from "@/components/admin/EquipmentTable";
 import { OnSiteEntryModal } from "@/components/admin/OnSiteEntryModal";
+import { ActivitiesTab } from "@/components/admin/ActivitiesTab";
 import { VehicleGlyph } from "@/components/illustrations";
-import { banUser, unbanUser } from "@/lib/actions/equipment";
-import { adminCreateUser } from "@/lib/actions/profile";
+import { KosturanziLogo } from "@/components/ui/KosturanziLogo";
+import { banUser, unbanUser, deleteUser } from "@/lib/actions/equipment";
+import { adminCreateUser, adminUpdateUser } from "@/lib/actions/profile";
 import type { VehicleType } from "@/lib/types";
 
-type Tab = "overview" | "equipment" | "approvals" | "log" | "users";
-type TabIcon = "home" | "box" | "check" | "list" | "people";
+type Tab = "overview" | "equipment" | "approvals" | "activities" | "log" | "users";
+type TabIcon = "home" | "box" | "check" | "list" | "people" | "chart";
 
 const TABS: { k: Tab; label: string; icon: TabIcon }[] = [
   { k: "overview", label: "Genel Bakış", icon: "home" },
   { k: "equipment", label: "Ekipman Takibi", icon: "box" },
   { k: "approvals", label: "Stant & Başvurular", icon: "check" },
+  { k: "activities", label: "Aktiviteler", icon: "chart" },
   { k: "log", label: "Teslim Geçmişi", icon: "list" },
   { k: "users", label: "Kullanıcılar", icon: "people" },
 ];
@@ -26,6 +29,7 @@ const TAB_TITLE: Record<Tab, string> = {
   overview: "Genel Bakış",
   equipment: "Ekipman Takibi",
   approvals: "Stant & Başvurular",
+  activities: "Tüm Aktiviteler",
   log: "Teslim Geçmişi",
   users: "Kullanıcılar",
 };
@@ -67,16 +71,9 @@ export function AdminDashboard() {
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-ink">
-      <div className="flex items-center gap-3 px-4 py-6">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sun font-heading text-base font-extrabold text-ink">
-          ytu
-        </div>
-        <div>
-          <div className="font-heading text-[15px] font-bold leading-none text-white">
-            kosturanzi<span className="text-amber-400">.</span>
-          </div>
-          <div className="mt-1 text-[10px] text-white/40">Admin Paneli</div>
-        </div>
+      <div className="flex flex-col items-start gap-2 px-4 py-6">
+        <KosturanziLogo size="md" dark />
+        <div className="text-[10px] text-white/40">Admin Paneli</div>
       </div>
 
       <nav className="flex-1 space-y-0.5 px-2">
@@ -120,7 +117,7 @@ export function AdminDashboard() {
   );
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    <div className="flex h-screen bg-paper">
       <aside className="hidden w-60 shrink-0 lg:block">
         <div className="sticky top-0 h-screen">{sidebarContent}</div>
       </aside>
@@ -142,7 +139,7 @@ export function AdminDashboard() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-ink/10 bg-paper px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -179,6 +176,9 @@ export function AdminDashboard() {
           {tab === "overview" && <OverviewTab gotoTab={navTo} />}
           {tab === "equipment" && <EquipmentTable />}
           {tab === "approvals" && <PendingActivities />}
+          {tab === "activities" && (
+            <ActivitiesTab onGotoApprovals={() => navTo("approvals")} />
+          )}
           {tab === "log" && <LogTab />}
           {tab === "users" && <UsersTab />}
         </main>
@@ -716,7 +716,10 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserRow | null>(null);
 
   async function load() {
     const [{ data: profiles }, { data: acts }] = await Promise.all([
@@ -763,6 +766,16 @@ function UsersTab() {
       );
     }
     setBusyId(null);
+  }
+
+  async function handleDelete(userId: string) {
+    setDeletingId(userId);
+    const result = await deleteUser(userId);
+    if (!result.error) {
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setDeleteConfirmId(null);
+    }
+    setDeletingId(null);
   }
 
   const filtered = users.filter((u) => {
@@ -851,25 +864,177 @@ function UsersTab() {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={busyId === u.id}
-                onClick={() => handleBan(u.id, !u.is_banned)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
-                  u.is_banned
-                    ? "border border-ink/20 text-ink/60 hover:bg-ink/5"
-                    : "border border-red-200 text-red-600 hover:bg-red-50"
-                }`}
-              >
-                {busyId === u.id ? "…" : u.is_banned ? "Banı Kaldır" : "Banla"}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {deleteConfirmId === u.id ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmId(null)}
+                      className="rounded-full border border-ink/20 px-2.5 py-1.5 text-xs font-medium text-ink/50 hover:bg-ink/5"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === u.id}
+                      onClick={() => handleDelete(u.id)}
+                      className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deletingId === u.id ? "…" : "Onayla, Sil"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setEditTarget(u)}
+                      className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-sky/40 hover:text-sky-deep"
+                      title="Düzenle"
+                    >
+                      <EditUserIcon />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === u.id}
+                      onClick={() => handleBan(u.id, !u.is_banned)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
+                        u.is_banned
+                          ? "border border-ink/20 text-ink/60 hover:bg-ink/5"
+                          : "border border-red-200 text-red-600 hover:bg-red-50"
+                      }`}
+                    >
+                      {busyId === u.id
+                        ? "…"
+                        : u.is_banned
+                          ? "Banı Kaldır"
+                          : "Banla"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmId(u.id)}
+                      className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                      title="Kullanıcıyı sil"
+                    >
+                      <DeleteUserIcon />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))
         )}
       </div>
+
+      {editTarget && (
+        <EditUserModal
+          user={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={(updated) => {
+            setUsers((prev) =>
+              prev.map((u) =>
+                u.id === updated.id
+                  ? { ...u, full_name: updated.full_name, phone: updated.phone }
+                  : u,
+              ),
+            );
+            setEditTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function EditUserModal({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserRow;
+  onClose: () => void;
+  onSaved: (updated: { id: string; full_name: string; phone: string }) => void;
+}) {
+  const [fullName, setFullName] = useState(user.full_name);
+  const [phone, setPhone] = useState(user.phone);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setError(null);
+    setSaving(true);
+    const result = await adminUpdateUser(user.id, { fullName, phone });
+    setSaving(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    onSaved({ id: user.id, full_name: fullName.trim(), phone: phone.trim() });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !saving && onClose()}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-1 font-heading text-xl font-semibold">
+          Profil Düzenle
+        </h2>
+        <p className="mb-4 text-sm text-ink/50">{user.email}</p>
+
+        <div className="space-y-3">
+          <Field label="İsim Soyisim">
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 px-3.5 py-2.5 text-sm outline-none transition focus:border-sky"
+              autoFocus
+            />
+          </Field>
+          <Field label="Telefon">
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 px-3.5 py-2.5 text-sm outline-none transition focus:border-sky"
+              placeholder="05XX XXX XX XX"
+            />
+          </Field>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-full border border-ink/20 px-4 py-2 text-sm font-medium text-ink/60 transition hover:bg-ink/3 disabled:opacity-50"
+          >
+            İptal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !fullName.trim() || !phone.trim()}
+            className="flex flex-1 items-center justify-center rounded-full bg-sky-deep py-2 text-sm font-semibold text-white transition hover:bg-sky-deep/85 disabled:bg-ink/20"
+          >
+            {saving ? "Kaydediliyor…" : "Kaydet"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CreateUserModal({
   onClose,
   onCreated,
@@ -1044,5 +1209,49 @@ function SideIcon({ name }: { name: TabIcon }) {
         <circle cx="4" cy="18" r="1" className="fill-current" />
       </svg>
     );
+  if (name === "chart")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <rect x="3" y="13" width="4" height="7" rx="1" />
+        <rect x="10" y="8" width="4" height="12" rx="1" />
+        <rect x="17" y="4" width="4" height="16" rx="1" />
+      </svg>
+    );
   return null;
+}
+
+function EditUserIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 2l3 3-8 8H3v-3L11 2z" />
+    </svg>
+  );
+}
+
+function DeleteUserIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 7a4 4 0 1 0-8 0" />
+      <path d="M6 11v4" />
+      <path d="M2 11h8" />
+      <line x1="12" y1="10" x2="16" y2="14" />
+      <line x1="16" y1="10" x2="12" y2="14" />
+    </svg>
+  );
 }

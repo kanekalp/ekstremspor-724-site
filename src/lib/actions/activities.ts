@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { EquipmentVehicleType } from "@/lib/types";
+import type { EquipmentVehicleType, VehicleType, ActivityStatus } from "@/lib/types";
 
 type RequestResult =
   | { ok: true; replaced?: boolean; alreadyPending?: boolean }
@@ -109,26 +109,118 @@ export async function decideActivity(
 
   const { data: activity } = await admin
     .from("activities")
-    .select("evidence_url, status")
+    .select("evidence_url, status, user_id, source")
     .eq("id", activityId)
     .maybeSingle();
   if (!activity) return { error: "Aktivite bulunamadı." };
 
-  if (activity.evidence_url) {
+  // Delete evidence only on rejection — keep it on approval so status
+  // can be changed back without losing the file reference.
+  if (decision === "rejected" && activity.evidence_url) {
     await admin.storage.from("evidence").remove([activity.evidence_url]);
   }
 
   const { error } = await admin
     .from("activities")
-    .update({ status: decision, evidence_url: null })
+    .update({
+      status: decision,
+      ...(decision === "rejected" ? { evidence_url: null } : {}),
+    })
     .eq("id", activityId);
   if (error) {
     console.error("decideActivity update failed:", error);
     return { error: "Aktivite güncellenemedi." };
   }
 
+  if (decision === "rejected" && activity.source === "on_site") {
+    await admin
+      .from("profiles")
+      .update({ equipment_request_status: "rejected" })
+      .eq("id", activity.user_id);
+  }
+
   return {};
 }
+export async function adminUpdateActivity(
+  activityId: string,
+  data: {
+    distance?: number;
+    vehicle_type?: VehicleType;
+    status?: ActivityStatus;
+    date_range?: string | null;
+  },
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin") return { error: "Yetkin yok." };
+
+  const update: Partial<{
+    distance: number;
+    vehicle_type: VehicleType;
+    status: ActivityStatus;
+    date_range: string | null;
+  }> = {};
+  if (data.distance !== undefined) update.distance = data.distance;
+  if (data.vehicle_type !== undefined) update.vehicle_type = data.vehicle_type;
+  if (data.status !== undefined) update.status = data.status;
+  if (data.date_range !== undefined) update.date_range = data.date_range;
+
+  const { error } = await admin
+    .from("activities")
+    .update(update)
+    .eq("id", activityId);
+  if (error) {
+    console.error("adminUpdateActivity error:", error);
+    return { error: "Aktivite güncellenemedi." };
+  }
+  return {};
+}
+
+export async function adminDeleteActivity(
+  activityId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin") return { error: "Yetkin yok." };
+
+  const { data: act } = await admin
+    .from("activities")
+    .select("evidence_url")
+    .eq("id", activityId)
+    .maybeSingle();
+
+  if (act?.evidence_url) {
+    await admin.storage.from("evidence").remove([act.evidence_url]);
+  }
+
+  const { error } = await admin.from("activities").delete().eq("id", activityId);
+  if (error) {
+    console.error("adminDeleteActivity error:", error);
+    return { error: "Aktivite silinemedi." };
+  }
+  return {};
+}
+
 export async function cancelActivity(
   activityId: string,
 ): Promise<{ error?: string }> {

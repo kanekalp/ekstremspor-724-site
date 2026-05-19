@@ -105,6 +105,7 @@ export function EquipmentTable() {
       .from("equipments")
       .update({
         status: returnDamaged ? "damaged" : "available",
+        assigned_to: null,
         returned_at: new Date().toISOString(),
       })
       .eq("id", returnTarget.id);
@@ -273,7 +274,7 @@ export function EquipmentTable() {
             return (
               <div
                 key={type}
-                className="overflow-hidden rounded-2xl border border-ink/10 bg-white"
+                className="rounded-2xl border border-ink/10 bg-white"
               >
                 <div className="flex items-center justify-between border-b border-ink/8 px-4 py-3 sm:px-6">
                   <div className="flex items-center gap-2.5">
@@ -293,176 +294,178 @@ export function EquipmentTable() {
                   </div>
                 </div>
 
-                {items.map((r, i) => {
-                  const meta = STATUS_META[r.status];
-                  const isEditing = editId === r.id;
-                  const isBusy = busyId === r.id || deletingId === r.id;
-                  return (
-                    <div
-                      key={r.id}
-                      className={`flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
-                    >
-                      <div className="w-28 shrink-0">
-                        {isEditing ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              autoFocus
-                              value={editVal}
-                              onChange={(e) => setEditVal(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveCode(r.id);
-                                if (e.key === "Escape") setEditId(null);
-                              }}
-                              className="w-20 rounded-md border border-ink/20 px-1.5 py-0.5 font-mono text-xs outline-none focus:border-sky"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => saveCode(r.id)}
-                              className="text-grass-deep hover:text-grass-deep/70"
-                            >
-                              <svg
-                                viewBox="0 0 16 16"
-                                className="h-3.5 w-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                              >
-                                <polyline points="2,8 6,12 14,4" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditId(null)}
-                              className="text-ink/40 hover:text-ink/70"
-                            >
-                              <svg
-                                viewBox="0 0 16 16"
-                                className="h-3.5 w-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                              >
-                                <line x1="3" y1="3" x2="13" y2="13" />
-                                <line x1="13" y1="3" x2="3" y2="13" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditId(r.id);
-                              setEditVal(r.code ?? "");
-                            }}
-                            className="flex items-center gap-1 font-mono text-xs text-ink/60 hover:text-ink"
-                            title="Kodu düzenle"
-                          >
-                            <span>
-                              {r.code ?? (
-                                <span className="text-ink/40">
-                                  {r.id.slice(0, 8)}
-                                </span>
-                              )}
-                            </span>
-                            <svg
-                              viewBox="0 0 16 16"
-                              className="h-3 w-3 shrink-0 text-ink/25"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M11 2l3 3-8 8H3v-3L11 2z" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${meta.cls}`}
+                <div className="overflow-x-auto">
+                  {items.map((r, i) => {
+                    const meta = STATUS_META[r.status];
+                    const isEditing = editId === r.id;
+                    const isBusy = busyId === r.id || deletingId === r.id;
+                    return (
+                      <div
+                        key={r.id}
+                        className={`flex min-w-[480px] items-center gap-3 px-4 py-3 sm:min-w-0 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
                       >
-                        {meta.label}
-                      </span>
-                      {r.status === "in_use" && r.profiles?.full_name ? (
-                        <span className="min-w-0 flex-1 truncate text-sm text-ink/70">
-                          {r.profiles.full_name}
+                        <div className="shrink-0">
+                          {isEditing ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                autoFocus
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveCode(r.id);
+                                  if (e.key === "Escape") setEditId(null);
+                                }}
+                                className="w-20 rounded-md border border-ink/20 px-1.5 py-0.5 font-mono text-xs outline-none focus:border-sky"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => saveCode(r.id)}
+                                className="text-grass-deep hover:text-grass-deep/70"
+                              >
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                >
+                                  <polyline points="2,8 6,12 14,4" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditId(null)}
+                                className="text-ink/40 hover:text-ink/70"
+                              >
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                >
+                                  <line x1="3" y1="3" x2="13" y2="13" />
+                                  <line x1="13" y1="3" x2="3" y2="13" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditId(r.id);
+                                setEditVal(r.code ?? "");
+                              }}
+                              className="flex items-center gap-1 font-mono text-xs text-ink/60 hover:text-ink"
+                              title="Kodu düzenle"
+                            >
+                              <span>
+                                {r.code ?? (
+                                  <span className="text-ink/40">
+                                    {r.id.slice(0, 8)}
+                                  </span>
+                                )}
+                              </span>
+                              <svg
+                                viewBox="0 0 16 16"
+                                className="h-3 w-3 shrink-0 text-ink/25"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M11 2l3 3-8 8H3v-3L11 2z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${meta.cls}`}
+                        >
+                          {meta.label}
                         </span>
-                      ) : (
-                        <span className="flex-1" />
-                      )}
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {r.status === "available" && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAssignTarget({
-                                  id: r.id,
-                                  label: LABEL[type],
-                                })
-                              }
-                              className="rounded-full bg-sky-deep px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-deep/85"
-                            >
-                              Ata
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => toggleDamaged(r.id, "available")}
-                              title="Hasarlı olarak işaretle"
-                              className="rounded-full border border-sun/40 px-2.5 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-sun/10 disabled:opacity-40"
-                            >
-                              Hasar
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => handleDelete(r.id)}
-                              title="Sil"
-                              className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                            >
-                              <TrashIcon />
-                            </button>
-                          </>
+                        {r.status === "in_use" && r.profiles?.full_name ? (
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink/70">
+                            {r.profiles.full_name}
+                          </span>
+                        ) : (
+                          <span className="flex-1" />
                         )}
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {r.status === "available" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAssignTarget({
+                                    id: r.id,
+                                    label: LABEL[type],
+                                  })
+                                }
+                                className="rounded-full bg-sky-deep px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-deep/85"
+                              >
+                                Ata
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => toggleDamaged(r.id, "available")}
+                                title="Hasarlı olarak işaretle"
+                                className="rounded-full border border-sun/40 px-2.5 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-sun/10 disabled:opacity-40"
+                              >
+                                Hasar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleDelete(r.id)}
+                                title="Sil"
+                                className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </>
+                          )}
 
-                        {r.status === "in_use" && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReturnTarget(r);
-                              setReturnKm("");
-                              setReturnDamaged(false);
-                            }}
-                            className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium transition hover:bg-ink/5"
-                          >
-                            İade Al
-                          </button>
-                        )}
+                          {r.status === "in_use" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReturnTarget(r);
+                                setReturnKm("");
+                                setReturnDamaged(false);
+                              }}
+                              className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium transition hover:bg-ink/5"
+                            >
+                              İade Al
+                            </button>
+                          )}
 
-                        {r.status === "damaged" && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => toggleDamaged(r.id, "damaged")}
-                              className="rounded-full border border-grass-deep/30 px-2.5 py-1.5 text-xs font-medium text-grass-deep transition hover:bg-grass/15 disabled:opacity-40"
-                            >
-                              Düzelt
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => handleDelete(r.id)}
-                              title="Sil"
-                              className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                            >
-                              <TrashIcon />
-                            </button>
-                          </>
-                        )}
+                          {r.status === "damaged" && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => toggleDamaged(r.id, "damaged")}
+                                className="rounded-full border border-grass-deep/30 px-2.5 py-1.5 text-xs font-medium text-grass-deep transition hover:bg-grass/15 disabled:opacity-40"
+                              >
+                                Düzelt
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleDelete(r.id)}
+                                title="Sil"
+                                className="rounded-full border border-ink/15 p-1.5 text-ink/40 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             );
           })

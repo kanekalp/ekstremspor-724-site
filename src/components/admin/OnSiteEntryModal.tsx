@@ -65,7 +65,7 @@ export function OnSiteEntryModal({ open, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
-      onClick={onClose}
+      onClick={() => !submitting && onClose()}
     >
       <div
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"

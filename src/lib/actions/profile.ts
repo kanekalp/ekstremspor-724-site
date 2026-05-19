@@ -136,3 +136,38 @@ export async function adminCreateUser(input: {
   revalidatePath("/admin");
   return { userId };
 }
+
+export async function adminUpdateUser(
+  userId: string,
+  data: { fullName: string; phone: string },
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const admin = createAdminClient();
+  const { data: callerProfile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (callerProfile?.role !== "admin") return { error: "Yetkin yok." };
+
+  const fullName = data.fullName.trim();
+  const phone = data.phone.trim();
+  if (!fullName) return { error: "İsim boş bırakılamaz." };
+  if (!phone) return { error: "Telefon boş bırakılamaz." };
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ full_name: fullName, phone })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("adminUpdateUser error:", error);
+    return { error: "Profil güncellenemedi." };
+  }
+  return {};
+}

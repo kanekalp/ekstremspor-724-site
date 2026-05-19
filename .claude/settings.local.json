@@ -9,7 +9,8 @@
       "Bash(Sort-Object)",
       "Bash(npx tsc *)",
       "PowerShell(npx supabase db psql --command \"select tablename from pg_tables where schemaname='public' order by tablename;\" 2>&1 | Select-Object -First 40)",
-      "PowerShell(npx supabase db query \"select tablename from pg_tables where schemaname='public' order by tablename;\" 2>&1 | Select-Object -First 40)"
+      "PowerShell(npx supabase db query \"select tablename from pg_tables where schemaname='public' order by tablename;\" 2>&1 | Select-Object -First 40)",
+      "Bash(Test-Path *)"
     ]
   }
 }

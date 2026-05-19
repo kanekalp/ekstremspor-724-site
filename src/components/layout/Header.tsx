@@ -62,14 +62,6 @@ export function Header({
                   {l.label}
                 </a>
               ))}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-ink/80 transition hover:bg-ink/5"
-                >
-                  Admin
-                </Link>
-              )}
             </div>
 
             {isAuthed ? (
@@ -85,7 +77,14 @@ export function Header({
                     <span className="h-1.5 w-1.5 rounded-full bg-sun" />
                     Profilini Tamamla
                   </button>
-                ) : !isAdmin && !isBanned ? (
+                ) : isAdmin ? (
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-sky-deep px-3.5 py-2 text-[13px] font-semibold text-paper transition hover:bg-sky-deep/85 active:scale-[0.97] active:transition-none sm:px-4"
+                  >
+                    Admin <Arrow size={11} color="currentColor" />
+                  </Link>
+                ) : !isBanned ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -95,7 +94,7 @@ export function Header({
                     }}
                     className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[13px] font-semibold text-paper transition hover:bg-ink/90 active:scale-[0.97] active:transition-none sm:px-4"
                   >
-                    Sürüş Ekle <Arrow size={11} color="currentColor" />
+                    Aktivite Ekle <Arrow size={11} color="currentColor" />
                   </button>
                 ) : null}
                 <div className="relative">
@@ -230,15 +229,6 @@ export function Header({
                   {l.label}
                 </a>
               ))}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-2xl px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:bg-ink/5"
-                >
-                  Admin
-                </Link>
-              )}
               {isAuthed && (
                 <>
                   <div className="mx-2 my-1.5 h-px bg-ink/8" />

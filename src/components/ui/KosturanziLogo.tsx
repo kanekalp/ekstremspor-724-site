@@ -1,9 +1,10 @@
 type Props = {
   size?: "sm" | "md" | "lg";
   invert?: boolean;
+  dark?: boolean;
 };
 
-export function KosturanziLogo({ size = "md", invert = false }: Props) {
+export function KosturanziLogo({ size = "md", invert = false, dark = false }: Props) {
   const sizeMap = {
     sm: {
       badge: "h-5 px-1.5 text-[9px] rounded-[5px]",
@@ -24,7 +25,13 @@ export function KosturanziLogo({ size = "md", invert = false }: Props) {
 
   const { badge, text, gap } = sizeMap[size];
 
-  const badgeCls = invert ? "bg-paper/15 text-paper" : "bg-ink text-paper";
+  let badgeCls = invert ? "bg-paper/15 text-paper" : "bg-ink text-paper";
+  let textCls = "text-ink";
+
+  if (dark) {
+    badgeCls = "bg-white/20 text-white";
+    textCls = "text-white";
+  }
 
   return (
     <div className={`flex items-center ${gap}`}>
@@ -34,7 +41,7 @@ export function KosturanziLogo({ size = "md", invert = false }: Props) {
         ytu
       </span>
       <span
-        className={`font-heading font-bold tracking-tight leading-none ${text}`}
+        className={`font-heading font-bold tracking-tight leading-none ${text} ${textCls}`}
       >
         kosturanzi<span className="text-sun">.</span>
       </span>

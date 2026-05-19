@@ -151,3 +151,35 @@ export async function unbanUser(userId: string): Promise<{ error?: string }> {
   if (error) return { error: "Ban kaldırılamadı." };
   return {};
 }
+
+export async function deleteUser(userId: string): Promise<{ error?: string }> {
+  const auth = await requireAdmin();
+  if ("error" in auth) return { error: auth.error };
+
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.role === "admin") return { error: "Admin kullanıcı silinemez." };
+
+  // Clear any active equipment assignments first (avoids FK constraint violation)
+  await admin
+    .from("equipments")
+    .update({
+      assigned_to: null,
+      status: "available",
+      returned_at: new Date().toISOString(),
+    })
+    .eq("assigned_to", userId)
+    .eq("status", "in_use");
+
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error("deleteUser error:", error);
+    return { error: "Kullanıcı silinemedi." };
+  }
+  return {};
+}
