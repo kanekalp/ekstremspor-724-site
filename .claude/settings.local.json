@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(npm install *)",
+      "PowerShell(npm *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Kodlar\\\\Web\\\\React\\\\extremspor-site\" -Recurse -Force)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(npx tsc *)",
+      "PowerShell(npx supabase db psql --command \"select tablename from pg_tables where schemaname='public' order by tablename;\" 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx supabase db query \"select tablename from pg_tables where schemaname='public' order by tablename;\" 2>&1 | Select-Object -First 40)"
+    ]
+  }
+}

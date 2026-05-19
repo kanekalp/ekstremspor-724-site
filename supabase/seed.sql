@@ -1,0 +1,14 @@
+-- =============================================================
+-- LOCAL DEV SEED — production-clean.
+--
+-- Intentionally empty. The database starts with:
+--   - event_config   : single row seeded by migration 4
+--   - profiles       : empty (admin profile is created lazily on
+--                      first sign-in via signInAdmin server action)
+--   - equipments     : empty (admin adds real units from the panel)
+--   - activities     : empty
+--
+-- Admin credentials are configured via ADMIN_EMAILS + ADMIN_PASSWORD
+-- in .env.local. The first sign-in upserts the admin profile so no
+-- onboarding step is needed.
+-- =============================================================

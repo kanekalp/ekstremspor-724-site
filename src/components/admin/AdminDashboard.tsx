@@ -1,0 +1,1048 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { PendingActivities } from "@/components/admin/PendingActivities";
+import { EquipmentTable } from "@/components/admin/EquipmentTable";
+import { OnSiteEntryModal } from "@/components/admin/OnSiteEntryModal";
+import { VehicleGlyph } from "@/components/illustrations";
+import { banUser, unbanUser } from "@/lib/actions/equipment";
+import { adminCreateUser } from "@/lib/actions/profile";
+import type { VehicleType } from "@/lib/types";
+
+type Tab = "overview" | "equipment" | "approvals" | "log" | "users";
+type TabIcon = "home" | "box" | "check" | "list" | "people";
+
+const TABS: { k: Tab; label: string; icon: TabIcon }[] = [
+  { k: "overview", label: "Genel Bakış", icon: "home" },
+  { k: "equipment", label: "Ekipman Takibi", icon: "box" },
+  { k: "approvals", label: "Stant & Başvurular", icon: "check" },
+  { k: "log", label: "Teslim Geçmişi", icon: "list" },
+  { k: "users", label: "Kullanıcılar", icon: "people" },
+];
+
+const TAB_TITLE: Record<Tab, string> = {
+  overview: "Genel Bakış",
+  equipment: "Ekipman Takibi",
+  approvals: "Stant & Başvurular",
+  log: "Teslim Geçmişi",
+  users: "Kullanıcılar",
+};
+
+export function AdminDashboard() {
+  const supabase = createClient();
+  const [tab, setTab] = useState<Tab>("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [onSiteOpen, setOnSiteOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = useCallback(async () => {
+    const { count } = await supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    setPendingCount(count ?? 0);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const ch = supabase
+      .channel("admin-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "activities" },
+        fetchPendingCount,
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [supabase, fetchPendingCount]);
+
+  function navTo(t: Tab) {
+    setTab(t);
+    setSidebarOpen(false);
+  }
+
+  const sidebarContent = (
+    <div className="flex h-full flex-col bg-ink">
+      <div className="flex items-center gap-3 px-4 py-6">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sun font-heading text-base font-extrabold text-ink">
+          ytu
+        </div>
+        <div>
+          <div className="font-heading text-[15px] font-bold leading-none text-white">
+            kosturanzi<span className="text-amber-400">.</span>
+          </div>
+          <div className="mt-1 text-[10px] text-white/40">Admin Paneli</div>
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-0.5 px-2">
+        {TABS.map(({ k, label, icon }) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => navTo(k)}
+            className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-[13px] transition-colors ${
+              tab === k
+                ? "bg-white/10 font-semibold text-white"
+                : "font-normal text-white/60 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <span className="flex items-center gap-2.5">
+              <SideIcon name={icon} />
+              {label}
+            </span>
+            {k === "approvals" && pendingCount > 0 && (
+              <span className="rounded-full bg-sun px-1.5 py-0.5 text-[10px] font-bold leading-none text-ink tabular-nums">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
+
+      <div className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-grass shadow-[0_0_0_3px_rgba(134,239,172,0.3)]" />
+          <span className="text-[11px] text-white/50">Sistem aktif</span>
+        </div>
+        <Link
+          href="/"
+          className="block rounded-lg border border-white/10 px-3 py-2 text-[12px] text-white/50 transition-colors hover:text-white"
+        >
+          ← Ana sayfaya dön
+        </Link>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-paper">
+      <aside className="hidden w-60 shrink-0 lg:block">
+        <div className="sticky top-0 h-screen">{sidebarContent}</div>
+      </aside>
+
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-60 transition-transform duration-200 lg:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {sidebarContent}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between border-b border-ink/10 bg-paper px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-1.5 text-ink/50 hover:bg-ink/8 lg:hidden"
+              aria-label="Menü"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+              {TAB_TITLE[tab]}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOnSiteOpen(true)}
+            className="rounded-full bg-sky-deep px-3 py-1.5 text-sm font-semibold text-paper transition hover:bg-sky-deep/85"
+          >
+            + Stant Girişi
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
+          {tab === "overview" && <OverviewTab gotoTab={navTo} />}
+          {tab === "equipment" && <EquipmentTable />}
+          {tab === "approvals" && <PendingActivities />}
+          {tab === "log" && <LogTab />}
+          {tab === "users" && <UsersTab />}
+        </main>
+      </div>
+
+      <OnSiteEntryModal
+        open={onSiteOpen}
+        onClose={() => setOnSiteOpen(false)}
+      />
+    </div>
+  );
+}
+type EquipStat = { free: number; total: number };
+
+type OverviewData = {
+  totalKm: number;
+  participants: number;
+  pendingCount: number;
+  all: EquipStat;
+  bicycle: EquipStat;
+  skateboard: EquipStat;
+  skates: EquipStat;
+};
+
+type PendingPreview = {
+  id: string;
+  name: string;
+  distance: number;
+  created_at: string;
+};
+
+type ActiveCheckout = {
+  id: string;
+  type: VehicleType;
+  name: string;
+  assigned_at: string | null;
+};
+
+function OverviewTab({ gotoTab }: { gotoTab: (t: Tab) => void }) {
+  const supabase = createClient();
+  const [data, setData] = useState<OverviewData | null>(null);
+  const [recentPending, setRecentPending] = useState<PendingPreview[]>([]);
+  const [activeCheckouts, setActiveCheckouts] = useState<ActiveCheckout[]>([]);
+
+  const fetch = useCallback(async () => {
+    const [
+      approvedRes,
+      equipRes,
+      pendingCountRes,
+      pendingPreviewRes,
+      checkoutsRes,
+    ] = await Promise.all([
+      supabase
+        .from("activities")
+        .select("user_id, distance")
+        .eq("status", "approved"),
+      supabase.from("equipments").select("type, status"),
+      supabase
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabase
+        .from("activities")
+        .select("id, distance, created_at, profiles!inner(full_name)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("equipments")
+        .select("id, type, assigned_at, profiles:assigned_to(full_name)")
+        .eq("status", "in_use")
+        .order("assigned_at", { ascending: false, nullsFirst: false })
+        .limit(5),
+    ]);
+
+    const acts = approvedRes.data ?? [];
+    const equips = equipRes.data ?? [];
+
+    const totalKm = acts.reduce((s, a) => s + a.distance, 0);
+    const participants = new Set(acts.map((a) => a.user_id)).size;
+    const pendingCount = pendingCountRes.count ?? 0;
+
+    const stat = (type?: string): EquipStat => {
+      const items = type ? equips.filter((e) => e.type === type) : equips;
+      return {
+        free: items.filter((e) => e.status === "available").length,
+        total: items.length,
+      };
+    };
+
+    setData({
+      totalKm,
+      participants,
+      pendingCount,
+      all: stat(),
+      bicycle: stat("bicycle"),
+      skateboard: stat("skateboard"),
+      skates: stat("skates"),
+    });
+
+    const previews = (
+      pendingPreviewRes.data as unknown as {
+        id: string;
+        distance: number;
+        created_at: string;
+        profiles: { full_name: string } | null;
+      }[]
+    ).map((p) => ({
+      id: p.id,
+      name: p.profiles?.full_name ?? "—",
+      distance: p.distance,
+      created_at: p.created_at,
+    }));
+    setRecentPending(previews);
+
+    const checkouts = (
+      checkoutsRes.data as unknown as {
+        id: string;
+        type: VehicleType;
+        assigned_at: string | null;
+        profiles: { full_name: string } | null;
+      }[]
+    ).map((c) => ({
+      id: c.id,
+      type: c.type,
+      name: c.profiles?.full_name ?? "—",
+      assigned_at: c.assigned_at,
+    }));
+    setActiveCheckouts(checkouts);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  if (!data) {
+    return (
+      <div className="py-12 text-center text-sm text-ink/50">Yükleniyor...</div>
+    );
+  }
+
+  const equipUsed = data.all.total - data.all.free;
+  const statCards: {
+    v: string;
+    suffix?: string;
+    label: string;
+    note?: string;
+    urgent: boolean;
+  }[] = [
+    {
+      v: data.totalKm.toFixed(1),
+      suffix: "km",
+      label: "Toplam mesafe",
+      note: "onaylı aktiviteler",
+      urgent: false,
+    },
+    {
+      v: String(data.participants),
+      label: "Aktif katılımcı",
+      note: "kayıtlı sporcu",
+      urgent: false,
+    },
+    {
+      v: `${data.all.free}/${data.all.total}`,
+      label: "Boş ekipman",
+      note: `${equipUsed} dışarda`,
+      urgent: false,
+    },
+    {
+      v: String(data.pendingCount),
+      label: "Onay bekleyen",
+      note: data.pendingCount > 0 ? "aksiyon gerekiyor" : "temiz",
+      urgent: data.pendingCount > 0,
+    },
+  ];
+
+  const equipRows: {
+    label: string;
+    type: VehicleType;
+    free: number;
+    total: number;
+  }[] = [
+    { label: "Bisiklet", type: "bicycle", ...data.bicycle },
+    { label: "Kaykay", type: "skateboard", ...data.skateboard },
+    { label: "Paten", type: "skates", ...data.skates },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {statCards.map((c) => (
+          <div
+            key={c.label}
+            className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm"
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">
+              {c.label}
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <div className="font-heading text-2xl font-semibold tabular-nums text-ink sm:text-3xl">
+                {c.v}
+              </div>
+              {c.suffix && (
+                <div className="text-sm text-ink/40">{c.suffix}</div>
+              )}
+            </div>
+            {c.note && (
+              <div
+                className={`mt-1.5 text-xs ${
+                  c.urgent ? "font-semibold text-red-500" : "text-ink/40"
+                }`}
+              >
+                {c.note}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <div className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm lg:col-span-3">
+          <div className="flex items-center justify-between">
+            <div className="font-heading text-base font-semibold">
+              Ekipman durumu
+            </div>
+            <button
+              type="button"
+              onClick={() => gotoTab("equipment")}
+              className="text-xs text-ink/40 hover:text-ink"
+            >
+              Detaya git →
+            </button>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {equipRows.map((r) => {
+              const pct = r.total ? (r.free / r.total) * 100 : 0;
+              return (
+                <div
+                  key={r.label}
+                  className="rounded-xl border border-ink/8 p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="h-4 w-6 text-ink/70">
+                      <VehicleGlyph
+                        type={r.type}
+                        color="currentColor"
+                        accent="#f59e0b"
+                      />
+                    </div>
+                    <div className="text-[11px] font-semibold text-ink/40">
+                      {r.label}
+                    </div>
+                  </div>
+                  <div className="mt-2 font-heading text-2xl font-semibold tabular-nums">
+                    {r.free}
+                    <span className="text-sm font-medium text-ink/40">
+                      /{r.total}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/8">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${pct}%`,
+                        background: pct < 25 ? "#e87d4a" : "#3ea76b",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div className="font-heading text-base font-semibold">
+              Onay bekleyen
+            </div>
+            <button
+              type="button"
+              onClick={() => gotoTab("approvals")}
+              className="text-xs text-ink/40 hover:text-ink"
+            >
+              Tümünü gör →
+            </button>
+          </div>
+          {recentPending.length === 0 ? (
+            <div className="mt-6 text-center text-sm text-ink/40">
+              Bekleyen yok 🎉
+            </div>
+          ) : (
+            <div className="mt-2 divide-y divide-ink/8">
+              {recentPending.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between py-3"
+                >
+                  <div>
+                    <div className="text-sm font-medium">{p.name}</div>
+                    <div className="text-xs text-ink/40">{p.distance} km</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => gotoTab("approvals")}
+                    className="rounded-lg border border-ink/15 px-2.5 py-1 text-xs font-medium transition hover:bg-ink/5"
+                  >
+                    İncele
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="font-heading text-base font-semibold">
+            Aktif teslimler
+          </div>
+          <button
+            type="button"
+            onClick={() => gotoTab("log")}
+            className="text-xs text-ink/40 hover:text-ink"
+          >
+            Geçmişe git →
+          </button>
+        </div>
+        {activeCheckouts.length === 0 ? (
+          <div className="mt-6 text-center text-sm text-ink/40">
+            Şu an dışarda ekipman yok.
+          </div>
+        ) : (
+          <div className="mt-2 divide-y divide-ink/8">
+            {activeCheckouts.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 py-3">
+                <div className="h-4 w-6 shrink-0 text-ink/50">
+                  <VehicleGlyph type={c.type} color="currentColor" />
+                </div>
+                <div className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {c.name}
+                </div>
+                <div className="shrink-0 text-xs tabular-nums text-ink/40">
+                  {c.assigned_at
+                    ? new Date(c.assigned_at).toLocaleTimeString("tr-TR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}{" "}
+                  teslim
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+type EquipRow = {
+  id: string;
+  type: string;
+  status: string;
+  code: string | null;
+  assigned_at: string | null;
+  returned_at: string | null;
+  profiles: { full_name: string; email: string; phone: string } | null;
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  bicycle: "Bisiklet",
+  skates: "Paten",
+  skateboard: "Kaykay",
+};
+
+function LogTab() {
+  const supabase = createClient();
+  const [rows, setRows] = useState<EquipRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from("equipments")
+        .select(
+          "id, type, status, code, assigned_at, returned_at, profiles:assigned_to(full_name, email, phone)",
+        )
+        .order("assigned_at", { ascending: false, nullsFirst: false });
+      setRows((data ?? []) as unknown as EquipRow[]);
+      setLoading(false);
+    }
+    load();
+  }, [supabase]);
+
+  const active = rows.filter((r) => r.status === "in_use");
+  const returned = rows.filter((r) => r.returned_at && r.status !== "in_use");
+
+  function fmt(ts: string | null) {
+    if (!ts) return "—";
+    return new Date(ts).toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function duration(from: string | null, to: string | null) {
+    if (!from || !to) return null;
+    const mins = Math.round(
+      (new Date(to).getTime() - new Date(from).getTime()) / 60000,
+    );
+    if (mins < 60) return `${mins} dk`;
+    return `${Math.floor(mins / 60)} sa ${mins % 60} dk`;
+  }
+
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-sm text-ink/50">Yükleniyor...</div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <div className="mb-3 flex items-baseline gap-2">
+          <h2 className="font-heading text-lg font-semibold">
+            Aktif Teslimler
+          </h2>
+          {active.length > 0 && (
+            <span className="text-sm text-ink/40">
+              {active.length} ekipman dışarda
+            </span>
+          )}
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+          {active.length === 0 ? (
+            <div className="py-10 text-center text-sm text-ink/40">
+              Şu an teslim edilen ekipman yok.
+            </div>
+          ) : (
+            active.map((r, i) => (
+              <div
+                key={r.id}
+                className={`grid gap-1 px-4 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 rounded-full bg-sun/15 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    {TYPE_LABEL[r.type] ?? r.type}
+                  </span>
+                  {r.code && (
+                    <span className="font-mono text-[11px] font-semibold text-ink/50">
+                      {r.code}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-ink">
+                    {r.profiles?.full_name ?? "—"}
+                  </div>
+                  {r.profiles?.phone && (
+                    <div className="truncate text-[11px] text-ink/40">
+                      {r.profiles.phone}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right text-xs tabular-nums text-ink/40">
+                  {fmt(r.assigned_at)} teslim
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {returned.length > 0 && (
+        <section>
+          <h2 className="mb-3 font-heading text-lg font-semibold">
+            İade Edilenler
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+            {returned.map((r, i) => (
+              <div
+                key={r.id}
+                className={`grid gap-1 px-4 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 rounded-full bg-grass/30 px-2 py-0.5 text-xs font-medium text-grass-deep">
+                    {TYPE_LABEL[r.type] ?? r.type}
+                  </span>
+                  {r.code && (
+                    <span className="font-mono text-[11px] font-semibold text-ink/50">
+                      {r.code}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-ink">
+                    {r.profiles?.full_name ?? "—"}
+                  </div>
+                  {r.profiles?.phone && (
+                    <div className="truncate text-[11px] text-ink/40">
+                      {r.profiles.phone}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right text-xs tabular-nums text-ink/40">
+                  <div>{fmt(r.returned_at)} iade</div>
+                  {duration(r.assigned_at, r.returned_at) && (
+                    <div className="text-ink/30">
+                      {duration(r.assigned_at, r.returned_at)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+type UserRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  is_banned: boolean;
+  created_at: string;
+  total_km: number;
+};
+
+function UsersTab() {
+  const supabase = createClient();
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  async function load() {
+    const [{ data: profiles }, { data: acts }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, phone, is_banned, created_at")
+        .neq("role", "admin")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("activities")
+        .select("user_id, distance")
+        .eq("status", "approved"),
+    ]);
+
+    const kmByUser = new Map<string, number>();
+    for (const a of acts ?? []) {
+      kmByUser.set(a.user_id, (kmByUser.get(a.user_id) ?? 0) + a.distance);
+    }
+
+    setUsers(
+      (profiles ?? []).map((p) => ({
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        phone: p.phone,
+        is_banned: (p as unknown as { is_banned: boolean }).is_banned ?? false,
+        created_at: p.created_at,
+        total_km: kmByUser.get(p.id) ?? 0,
+      })),
+    );
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleBan(userId: string, ban: boolean) {
+    setBusyId(userId);
+    const result = ban ? await banUser(userId) : await unbanUser(userId);
+    if (!result.error) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, is_banned: ban } : u)),
+      );
+    }
+    setBusyId(null);
+  }
+
+  const filtered = users.filter((u) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      u.full_name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.phone.includes(q)
+    );
+  });
+
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-sm text-ink/50">Yükleniyor...</div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          placeholder="İsim, e-posta veya telefon ara…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 rounded-xl border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-sky/50 focus:ring-2 focus:ring-sky/20"
+        />
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-full bg-grass-deep px-3 py-1.5 text-xs font-semibold text-paper transition hover:bg-grass-deep/85"
+        >
+          + Kullanıcı Ekle
+        </button>
+        <span className="shrink-0 text-xs text-ink/40">
+          {filtered.length} kayıt
+        </span>
+      </div>
+
+      {createOpen && (
+        <CreateUserModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setCreateOpen(false);
+            load();
+          }}
+        />
+      )}
+
+      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm">
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-sm text-ink/40">
+            {search ? "Sonuç bulunamadı." : "Kayıtlı kullanıcı yok."}
+          </div>
+        ) : (
+          filtered.map((u, i) => (
+            <div
+              key={u.id}
+              className={`grid gap-2 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""} ${u.is_banned ? "bg-red-50/40" : ""}`}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm font-semibold text-ink">
+                    {u.full_name}
+                  </span>
+                  {u.is_banned && (
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                      Banlı
+                    </span>
+                  )}
+                  {u.total_km > 0 && (
+                    <span className="rounded-full bg-grass/20 px-2 py-0.5 text-[10px] font-bold text-grass-deep tabular-nums">
+                      {u.total_km.toFixed(1)} km
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-ink/45">
+                  <span>{u.email}</span>
+                  <span>{u.phone}</span>
+                  <span className="tabular-nums">
+                    {new Date(u.created_at).toLocaleDateString("tr-TR", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === u.id}
+                onClick={() => handleBan(u.id, !u.is_banned)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
+                  u.is_banned
+                    ? "border border-ink/20 text-ink/60 hover:bg-ink/5"
+                    : "border border-red-200 text-red-600 hover:bg-red-50"
+                }`}
+              >
+                {busyId === u.id ? "…" : u.is_banned ? "Banı Kaldır" : "Banla"}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+function CreateUserModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    setError(null);
+    setSubmitting(true);
+    const result = await adminCreateUser({
+      fullName,
+      email,
+      phone,
+      equipmentNeed: "none",
+    });
+    setSubmitting(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    onCreated();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !submitting && onClose()}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-1 font-heading text-xl font-semibold">
+          Kullanıcı Ekle
+        </h2>
+        <p className="mb-4 text-sm text-ink/50">
+          Etkinlik sırasında elle alınmış katılımcıyı sisteme kaydet.
+        </p>
+
+        <div className="space-y-3">
+          <Field label="İsim Soyisim">
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 px-3.5 py-2.5 text-sm outline-none transition focus:border-sky"
+              placeholder="örn. Ayşe Yılmaz"
+              autoFocus
+            />
+          </Field>
+          <Field label="E-posta">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 px-3.5 py-2.5 text-sm outline-none transition focus:border-sky"
+              placeholder="ornek@std.yildiz.edu.tr"
+            />
+          </Field>
+          <Field label="Telefon">
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 px-3.5 py-2.5 text-sm outline-none transition focus:border-sky"
+              placeholder="05XX XXX XX XX"
+            />
+          </Field>
+        </div>
+        <p className="mt-2 text-xs text-ink/45">
+          Ekipman talebini kullanıcı kendi giriş yaptığında seçer; gerekirse sen
+          Stant Girişi'nden de aktivite ekleyebilirsin.
+        </p>
+
+        {error && (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-full border border-ink/20 px-4 py-2 text-sm font-medium text-ink/60 transition hover:bg-ink/3 disabled:opacity-50"
+          >
+            İptal
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting || !fullName || !email || !phone}
+            className="flex flex-1 items-center justify-center rounded-full bg-grass-deep py-2 text-sm font-semibold text-white transition hover:bg-grass-deep/85 disabled:bg-ink/20"
+          >
+            {submitting ? "Kaydediliyor…" : "Kaydet"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-ink/50">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+function SideIcon({ name }: { name: TabIcon }) {
+  const cls = "h-4 w-4 shrink-0 fill-none stroke-current";
+  const p = {
+    strokeWidth: 1.8 as const,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  if (name === "people")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    );
+  if (name === "home")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <path d="M3 11l9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+      </svg>
+    );
+  if (name === "box")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M3 11h18M9 7V4h6v3" />
+      </svg>
+    );
+  if (name === "check")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <path d="M9 11l3 3L20 6" />
+        <path d="M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11" />
+      </svg>
+    );
+  if (name === "list")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} {...p}>
+        <line x1="8" y1="6" x2="21" y2="6" />
+        <line x1="8" y1="12" x2="21" y2="12" />
+        <line x1="8" y1="18" x2="21" y2="18" />
+        <circle cx="4" cy="6" r="1" className="fill-current" />
+        <circle cx="4" cy="12" r="1" className="fill-current" />
+        <circle cx="4" cy="18" r="1" className="fill-current" />
+      </svg>
+    );
+  return null;
+}

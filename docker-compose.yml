@@ -1,0 +1,20 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* values are inlined into the client bundle at
+        # build time, so they must be passed as build args (not just
+        # runtime env). Reads from the .env file in this directory.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: extremspor-web
+    ports:
+      - "3000:3000"
+    env_file:
+      # Server-only env (SUPABASE_SERVICE_ROLE_KEY, ADMIN_PASSWORD, etc.)
+      # is loaded at runtime. The same file holds the NEXT_PUBLIC_* vars
+      # that compose interpolates into the build args above.
+      - .env
+    restart: unless-stopped

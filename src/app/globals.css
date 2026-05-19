@@ -1,0 +1,579 @@
+@import "tailwindcss";
+
+/* Register hero CSS custom properties so they can be transitioned between themes */
+@property --hero-sky-top {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #60a5fa;
+}
+@property --hero-sky-bottom {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #bfdbfe;
+}
+@property --hero-mountain {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #16a34a;
+}
+@property --hero-sun-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.9;
+}
+@property --hero-text {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #1a1a1a;
+}
+@property --hero-text-soft {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 255, 255, 0.85);
+}
+@property --hero-scrim {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 255, 255, 0.4);
+}
+
+@theme {
+  --color-ink: #1a1a1a;
+  --color-paper: #faf6ec;
+  --color-paper-warm: #f5efe0;
+  --color-sun: #f59e0b;
+  --color-sky: #60a5fa;
+  --color-sky-deep: #1d4ed8;
+  --color-grass: #86efac;
+  --color-grass-deep: #15803d;
+
+  --font-heading: var(--font-bricolage);
+  --font-sans: var(--font-space-grotesk);
+}
+
+:root {
+  --hero-sky-top: #60a5fa;
+  --hero-sky-bottom: #bfdbfe;
+  --hero-sun-opacity: 0.9;
+  --hero-mountain: #16a34a;
+  --hero-text: #1a1a1a;
+  --hero-text-soft: rgba(26, 26, 26, 0.85);
+  --hero-scrim: rgba(255, 255, 255, 0.4);
+  --hero-h1-shadow: none;
+  --hero-subtitle-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55), 0 0 14px rgba(255, 255, 255, 0.45);
+
+  --color-building-main: #aea8a0;
+  --color-building-accent: #6b6056;
+  --color-building-dark: #1a1a1a;
+  --color-window-glass: #37536c;
+  --color-window-frame: #ffffff;
+  --color-roof: #a57b7b;
+  --color-pipe: #dee1e3;
+  --color-road: #b3b3b3;
+}
+
+[data-theme="dawn"] {
+  --hero-sky-top: #fde68a;
+  --hero-sky-bottom: #fca5a5;
+  --hero-sun-opacity: 0.4;
+  --hero-mountain: #15803d;
+  --hero-text: #1a1a1a;
+  --hero-text-soft: rgba(26, 26, 26, 0.85);
+  --hero-scrim: rgba(255, 255, 255, 0.5);
+  --hero-h1-shadow: none;
+  --hero-subtitle-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55), 0 0 14px rgba(255, 255, 255, 0.5);
+
+  --color-building-main: #a8a39d;
+  --color-building-accent: #685f57;
+  --color-building-dark: #1c1a19;
+  --color-window-glass: #465a6b;
+  --color-window-frame: #f4f5f6;
+  --color-roof: #9e7575;
+  --color-pipe: #d2d6d9;
+  --color-road: #a8a8a8;
+}
+
+[data-theme="morning"] {
+  --hero-sky-top: #60a5fa;
+  --hero-sky-bottom: #bfdbfe;
+  --hero-sun-opacity: 0.9;
+  --hero-mountain: #16a34a;
+  --hero-text: #1a1a1a;
+  --hero-text-soft: rgba(26, 26, 26, 0.85);
+  --hero-scrim: rgba(255, 255, 255, 0.45);
+  --hero-h1-shadow: none;
+  --hero-subtitle-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6), 0 0 14px rgba(255, 255, 255, 0.5);
+
+  --color-building-main: #aea8a0;
+  --color-building-accent: #6b6056;
+  --color-building-dark: #1a1a1a;
+  --color-window-glass: #37536c;
+  --color-window-frame: #ffffff;
+  --color-roof: #a57b7b;
+  --color-pipe: #dee1e3;
+  --color-road: #b3b3b3;
+}
+
+[data-theme="noon"] {
+  --hero-sky-top: #1d4ed8;
+  --hero-sky-bottom: #60a5fa;
+  --hero-sun-opacity: 1;
+  --hero-mountain: #15803d;
+  --hero-text: #ffffff;
+  --hero-text-soft: rgba(255, 255, 255, 0.95);
+  --hero-scrim: rgba(0, 0, 0, 0.22);
+  --hero-h1-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+  --hero-subtitle-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.55), 0 0 18px rgba(0, 0, 0, 0.4);
+
+  --color-building-main: #b5b0a8;
+  --color-building-accent: #73675e;
+  --color-building-dark: #1f1d1c;
+  --color-window-glass: #3d607e;
+  --color-window-frame: #ffffff;
+  --color-roof: #ab8282;
+  --color-pipe: #e8eaec;
+  --color-road: #bcbcbc;
+}
+
+[data-theme="afternoon"] {
+  --hero-sky-top: #ea580c;
+  --hero-sky-bottom: #fde68a;
+  --hero-sun-opacity: 0.85;
+  --hero-mountain: #166534;
+  --hero-text: #1a1a1a;
+  --hero-text-soft: rgba(26, 26, 26, 0.88);
+  --hero-scrim: rgba(255, 255, 255, 0.5);
+  --hero-h1-shadow: none;
+  --hero-subtitle-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6), 0 0 14px rgba(255, 235, 200, 0.55);
+
+  --color-building-main: #b3a797;
+  --color-building-accent: #706152;
+  --color-building-dark: #211c18;
+  --color-window-glass: #5c645b;
+  --color-window-frame: #fdfaf6;
+  --color-roof: #a1766f;
+  --color-pipe: #d8d6d0;
+  --color-road: #b0ab9f;
+}
+
+[data-theme="evening"] {
+  --hero-sky-top: #4c1d95;
+  --hero-sky-bottom: #f97316;
+  --hero-sun-opacity: 0.7;
+  --hero-mountain: #14532d;
+  --hero-text: #ffffff;
+  --hero-text-soft: rgba(255, 255, 255, 0.95);
+  --hero-scrim: rgba(0, 0, 0, 0.28);
+  --hero-h1-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+  --hero-subtitle-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.6), 0 0 18px rgba(0, 0, 0, 0.45);
+
+  --color-building-main: #998c81;
+  --color-building-accent: #5c5046;
+  --color-building-dark: #1a1613;
+  --color-window-glass: #6a5d54;
+  --color-window-frame: #e3d9d3;
+  --color-roof: #8a6460;
+  --color-pipe: #b5adaa;
+  --color-road: #91847a;
+}
+
+[data-theme="night"] {
+  --hero-sky-top: #0f172a;
+  --hero-sky-bottom: #1e3a5f;
+  --hero-sun-opacity: 0;
+  --hero-mountain: #052e16;
+  --hero-text: #ffffff;
+  --hero-text-soft: rgba(255, 255, 255, 0.95);
+  --hero-scrim: rgba(0, 0, 0, 0.32);
+  --hero-h1-shadow: 0 2px 28px rgba(0, 0, 0, 0.7);
+  --hero-subtitle-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 0, 0, 0.5);
+
+  --color-building-main: #5b626b;
+  --color-building-accent: #3c4249;
+  --color-building-dark: #12161a;
+  --color-window-glass: #c29753;
+  --color-window-frame: #8b94a0;
+  --color-roof: #5e4a4a;
+  --color-pipe: #6c7680;
+  --color-road: #4a5159;
+}
+
+[data-theme="midnight"] {
+  --hero-sky-top: #020617;
+  --hero-sky-bottom: #0f172a;
+  --hero-sun-opacity: 0;
+  --hero-mountain: #052e16;
+  --hero-text: #ffffff;
+  --hero-text-soft: rgba(255, 255, 255, 0.95);
+  --hero-scrim: rgba(0, 0, 0, 0.38);
+  --hero-h1-shadow: 0 2px 28px rgba(0, 0, 0, 0.75);
+  --hero-subtitle-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.75), 0 0 22px rgba(0, 0, 0, 0.55);
+
+  --color-building-main: #40464f;
+  --color-building-accent: #282c33;
+  --color-building-dark: #0a0c0f;
+  --color-window-glass: #a67c3b;
+  --color-window-frame: #646c77;
+  --color-roof: #423434;
+  --color-pipe: #4e5660;
+  --color-road: #30353c;
+}
+
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
+  scroll-padding-top: 96px;
+  transition:
+    --hero-sky-top 2s ease-in-out,
+    --hero-sky-bottom 2s ease-in-out,
+    --hero-mountain 2s ease-in-out,
+    --hero-sun-opacity 2s ease-in-out,
+    --hero-text 2s ease-in-out,
+    --hero-text-soft 2s ease-in-out,
+    --hero-scrim 2s ease-in-out;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01";
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes sunPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes driftA {
+  from {
+    transform: translateX(-160px);
+  }
+  to {
+    transform: translateX(1400px);
+  }
+}
+
+@keyframes driftB {
+  from {
+    transform: translateX(-200px);
+  }
+  to {
+    transform: translateX(1500px);
+  }
+}
+
+@keyframes hillSway {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes rideAcross {
+  from {
+    transform: translateX(-40px);
+  }
+  to {
+    transform: translateX(1240px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.animate-live-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.18s ease both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.2s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(26, 26, 26, 0.06) 25%,
+    rgba(26, 26, 26, 0.12) 50%,
+    rgba(26, 26, 26, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.modal-pop {
+  animation: popIn 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+@keyframes rankUp {
+  0% {
+    background-color: rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes rankDown {
+  0% {
+    background-color: rgba(239, 68, 68, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes rankNew {
+  0% {
+    background-color: rgba(96, 165, 250, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes rankFade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-rank-up {
+  animation: rankUp 1.6s ease-out forwards;
+}
+.animate-rank-down {
+  animation: rankDown 1.6s ease-out forwards;
+}
+.animate-rank-new {
+  animation: rankNew 1.6s ease-out forwards;
+}
+.animate-rank-fade {
+  animation: rankFade 1.6s ease-out forwards;
+}
+
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-rise {
+  animation: heroRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.hero-rise-1 {
+  animation-delay: 60ms;
+}
+.hero-rise-2 {
+  animation-delay: 180ms;
+}
+.hero-rise-3 {
+  animation-delay: 320ms;
+}
+.hero-rise-4 {
+  animation-delay: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.hero-sun-core {
+  fill: var(--color-sun);
+}
+.b-wall,
+.b-entrance-bg,
+.b-line,
+.b-shadow,
+.b-roof,
+.b-road,
+.b-pipe-base,
+.b-pipe-front,
+.win-glass,
+.win-frame,
+.win-dark-bg,
+.win-deep,
+.win-mid,
+.win-frame-dark,
+.win-stroke,
+.win-stroke-thick,
+.win-line-dark {
+  transition:
+    fill 2s ease-in-out,
+    stroke 2s ease-in-out;
+}
+
+/* 3. RENK ATAMALARI VE KONTUR STANDARTLARI */
+.b-wall {
+  fill: var(--color-building-main);
+}
+.b-entrance-bg {
+  fill: color-mix(
+    in srgb,
+    var(--color-building-main),
+    var(--color-building-accent) 15%
+  );
+}
+.b-line {
+  fill: var(--color-building-accent);
+}
+.b-roof {
+  fill: var(--color-roof);
+}
+.b-road {
+  fill: var(--color-road);
+}
+.b-shadow,
+.b-pipe-base {
+  fill: var(--color-building-dark);
+  opacity: 0.2;
+}
+.b-pipe-front {
+  fill: var(--color-pipe);
+}
+
+.win-glass {
+  fill: var(--color-window-glass);
+}
+.win-frame {
+  fill: var(--color-window-frame);
+}
+.win-dark-bg {
+  fill: var(--color-building-dark);
+}
+.win-deep {
+  fill: var(--color-building-dark);
+  opacity: 0.6;
+}
+.win-mid {
+  fill: var(--color-building-accent);
+  opacity: 0.8;
+}
+
+.win-stroke,
+.win-stroke-thick,
+.win-line-dark,
+.win-frame-dark {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* resim.png'deki tutarsızlığı gideren kalınlıklar */
+.win-stroke {
+  stroke: var(--color-window-frame);
+  stroke-width: 1.5px;
+}
+.win-line-dark {
+  stroke: var(--color-building-accent);
+  stroke-width: 1.5px;
+}
+.win-frame-dark {
+  stroke: var(--color-building-accent);
+  stroke-width: 1.5px;
+}
+.win-stroke-thick {
+  stroke: var(--color-window-frame);
+  stroke-width: 2px;
+}
