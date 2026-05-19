@@ -212,21 +212,21 @@ export function HeroScene({ animated = true }: { animated?: boolean }) {
   const pipes = [438.9, 125.5, 761.1, 1074.5];
 
   const trees = [
-    { cx: 90, cy: 650, scale: 0.8 },
-    { cx: 240, cy: 685, scale: 1.4 },
     { cx: 460, cy: 642, scale: 0.65 },
     { cx: 740, cy: 642, scale: 0.65 },
-    { cx: 960, cy: 685, scale: 1.4 },
+    { cx: 90, cy: 650, scale: 0.8 },
     { cx: 1110, cy: 650, scale: 0.8 },
+    { cx: 240, cy: 685, scale: 1.4 },
+    { cx: 960, cy: 685, scale: 1.4 },
   ];
 
   const bushes = [
-    { cx: 140, cy: 645, r: 18 },
-    { cx: 320, cy: 655, r: 24 },
     { cx: 410, cy: 640, r: 14 },
     { cx: 790, cy: 640, r: 14 },
-    { cx: 880, cy: 655, r: 24 },
+    { cx: 140, cy: 645, r: 18 },
     { cx: 1060, cy: 645, r: 18 },
+    { cx: 320, cy: 655, r: 24 },
+    { cx: 880, cy: 655, r: 24 },
   ];
 
   return (
@@ -268,59 +268,71 @@ export function HeroScene({ animated = true }: { animated?: boolean }) {
         />
       </g>
 
-      <g
-        fill="#ffffff"
-        opacity="0.6"
-        style={{
-          animation: animated ? "driftB 120s linear infinite" : "none",
-          animationDelay: "-30s",
-          willChange: animated ? "transform" : "auto",
-        }}
-      >
+      <g fill="#ffffff" opacity="0.6">
+        {animated && (
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            from="-200 0"
+            to="1500 0"
+            dur="120s"
+            begin="-30s"
+            repeatCount="indefinite"
+          />
+        )}
         <circle cx="100" cy="260" r="20" />
         <circle cx="130" cy="250" r="28" />
         <circle cx="160" cy="265" r="18" />
         <circle cx="120" cy="270" r="22" />
       </g>
 
-      <g
-        fill="#ffffff"
-        opacity="0.8"
-        style={{
-          animation: animated ? "driftA 90s linear infinite" : "none",
-          animationDelay: "-15s",
-          willChange: animated ? "transform" : "auto",
-        }}
-      >
+      <g fill="#ffffff" opacity="0.8">
+        {animated && (
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            from="-160 0"
+            to="1400 0"
+            dur="90s"
+            begin="-15s"
+            repeatCount="indefinite"
+          />
+        )}
         <circle cx="450" cy="210" r="16" />
         <circle cx="475" cy="200" r="24" />
         <circle cx="500" cy="215" r="18" />
       </g>
 
-      <g
-        fill="#ffffff"
-        opacity="0.9"
-        style={{
-          animation: animated ? "driftA 65s linear infinite" : "none",
-          animationDelay: "-5s",
-          willChange: animated ? "transform" : "auto",
-        }}
-      >
+      <g fill="#ffffff" opacity="0.9">
+        {animated && (
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            from="-160 0"
+            to="1400 0"
+            dur="65s"
+            begin="-5s"
+            repeatCount="indefinite"
+          />
+        )}
         <circle cx="850" cy="230" r="22" />
         <circle cx="885" cy="220" r="32" />
         <circle cx="920" cy="235" r="24" />
         <circle cx="870" cy="245" r="20" />
       </g>
 
-      <g
-        fill="#ffffff"
-        opacity="0.4"
-        style={{
-          animation: animated ? "driftB 140s linear infinite" : "none",
-          animationDelay: "-75s",
-          willChange: animated ? "transform" : "auto",
-        }}
-      >
+      <g fill="#ffffff" opacity="0.4">
+        {animated && (
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            from="-200 0"
+            to="1500 0"
+            dur="140s"
+            begin="-75s"
+            repeatCount="indefinite"
+          />
+        )}
         <circle cx="200" cy="180" r="12" />
         <circle cx="220" cy="175" r="16" />
         <circle cx="240" cy="185" r="10" />

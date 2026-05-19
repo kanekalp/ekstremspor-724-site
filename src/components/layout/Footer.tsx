@@ -29,12 +29,12 @@ export function Footer() {
               </span>
             </div>
             <a
-              href="https://instagram.com/ytu.skylab"
+              href="https://instagram.com/ytuskylab"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[9px] tracking-widest text-paper/30 transition-colors hover:text-sky"
             >
-              @ytu.skylab
+              @ytuskylab
             </a>
           </div>
         </div>
