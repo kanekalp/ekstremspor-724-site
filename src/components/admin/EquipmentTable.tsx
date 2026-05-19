@@ -302,7 +302,7 @@ export function EquipmentTable() {
                     return (
                       <div
                         key={r.id}
-                        className={`flex min-w-[480px] items-center gap-3 px-4 py-3 sm:min-w-0 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
+                        className={`flex min-w-120 items-center gap-3 px-4 py-3 sm:min-w-0 sm:px-6 ${i > 0 ? "border-t border-ink/8" : ""}`}
                       >
                         <div className="shrink-0">
                           {isEditing ? (

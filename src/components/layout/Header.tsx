@@ -97,7 +97,7 @@ export function Header({
                     Aktivite Ekle <Arrow size={11} color="currentColor" />
                   </button>
                 ) : null}
-                <div className="relative">
+                <div className="relative hidden md:block">
                   <button
                     type="button"
                     onClick={() => setUserMenuOpen((o) => !o)}
